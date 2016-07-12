@@ -1,52 +1,31 @@
-(function($) {
-$(document).ready(function(){
+jQuery.githubUser = function(username, callback) {
+   jQuery.getJSON('https://api.github.com/users/'+username+'/repos?callback=?',callback)
+}
 
-  // putting lines by the pre blocks
-  $("pre").each(function(){
-    var pre = $(this).text().split("\n");
-    var lines = new Array(pre.length+1);
-    for(var i = 0; i < pre.length; i++) {
-      var wrap = Math.floor(pre[i].split("").length / 70)
-      if (pre[i]==""&&i==pre.length-1) {
-        lines.splice(i, 1);
-      } else {
-        lines[i] = i+1;
-        for(var j = 0; j < wrap; j++) {
-          lines[i] += "\n";
-        }
-      }
+//this method
+jQuery.fn.loadRepositories = function(username) {
+    this.html("<span>Querying GitHub for " + username +"'s repositories...</span>");
+
+    var target = this;
+    $.githubUser(username, function(data) {
+        var repos = data.data; // JSON Parsing
+        sortByName(repos);    
+
+        var list = $('<dl/>');
+        target.empty().append(list);
+        $(repos).each(function() {
+            if ((this.description).length>0){
+                if (this.name != (username.toLowerCase()+'.github.com')) {
+                    list.append('<dt><a href="'+ (this.homepage?this.homepage:this.html_url) +'">' + this.name + '</a> <em>'+(this.language?('('+this.language+')'):'')+'</em></dt>');
+                    list.append('<dd>' + this.description +'</dd>');
+                }
+            }
+        });      
+      });
+
+    function sortByName(repos) {
+        repos.sort(function(a,b) {
+        return a.name - b.name;
+       });
     }
-    $(this).before("<pre class='lines'>" + lines.join("\n") + "</pre>");
-  });
-
-  var headings = [];
-
-  var collectHeaders = function(){
-    headings.push({"top":$(this).offset().top - 15,"text":$(this).text()});
-  }
-
-  if($(".markdown-body h1").length > 1) $(".markdown-body h1").each(collectHeaders)
-  else if($(".markdown-body h2").length > 1) $(".markdown-body h2").each(collectHeaders)
-  else if($(".markdown-body h3").length > 1) $(".markdown-body h3").each(collectHeaders)
-
-  $(window).scroll(function(){
-    if(headings.length==0) return true;
-    var scrolltop = $(window).scrollTop() || 0;
-    if(headings[0] && scrolltop < headings[0].top) {
-      $(".current-section").css({"opacity":0,"visibility":"hidden"});
-      return false;
-    }
-    $(".current-section").css({"opacity":1,"visibility":"visible"});
-    for(var i in headings) {
-      if(scrolltop >= headings[i].top) {
-        $(".current-section .name").text(headings[i].text);
-      }
-    }
-  });
-
-  $(".current-section a").click(function(){
-    $(window).scrollTop(0);
-    return false;
-  })
-});
-})(jQuery)
+};
